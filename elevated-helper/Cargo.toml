@@ -1,0 +1,14 @@
+[package]
+name = "elevated-helper"
+version = "0.1.0"
+edition = "2021"
+# This is a standalone CLI binary — NOT part of the Tauri webview app.
+# It is spawned by the main app via ShellExecuteW "runas" to gain UAC elevation.
+
+[[bin]]
+name = "elevated-helper"
+path = "src/main.rs"
+
+[dependencies]
+# Same sysinfo version as the main app for consistency
+sysinfo = "0.30"

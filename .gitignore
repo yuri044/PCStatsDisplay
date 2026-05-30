@@ -1,0 +1,40 @@
+# IDEs and Editors
+.vscode/*
+!.vscode/extensions.json
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Hardware/OS Files
+.DS_Store
+Thumbs.db
+
+# Node.js / Frontend
+node_modules/
+dist/
+dist-ssr/ ;
+*.local
+.env
+.env.*
+!.env.example
+
+# Rust / Tauri Backend
+target/
+src-tauri/target/
+src-tauri/gen/
+src-tauri/binaries/
+
+# Elevated Helper (Rust)
+elevated-helper/target/
+
+# Logs
+logs
+*.log
+npm-debug.log*
+
+# AI / Assistant Context
+.claude/
+CLAUDE.md

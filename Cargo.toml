@@ -1,0 +1,5 @@
+# Rust workspace — groups the main Tauri app and the elevated-helper binary.
+# The elevated-helper is a separate process spawned via runas to gain UAC elevation.
+[workspace]
+members = ["src-tauri", "elevated-helper"]
+resolver = "2"

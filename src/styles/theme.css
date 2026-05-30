@@ -1,0 +1,49 @@
+/* Colour token definitions for dark and light themes.
+   All components reference these CSS variables so theme switching is instant.
+   Apply by setting data-theme="light" on <html>; dark is the default. */
+
+:root {
+  /* Backgrounds — layered depth */
+  --bg-primary:   rgba(12, 12, 18, 0.94);
+  --bg-secondary: rgba(20, 20, 30, 0.88);
+  --bg-hover:     rgba(38, 38, 56, 0.90);
+
+  /* Text */
+  --text-primary:   rgba(255, 255, 255, 0.94);
+  --text-secondary: rgba(255, 255, 255, 0.60);
+  --text-muted:     rgba(255, 255, 255, 0.32);
+
+  /* Accent palette */
+  --accent-blue:   #3b82f6;
+  --accent-green:  #22c55e;
+  --accent-orange: #f97316;
+  --accent-red:    #ef4444;
+  --accent-purple: #a855f7;
+
+  /* Borders */
+  --border:       rgba(255, 255, 255, 0.07);
+  --border-hover: rgba(255, 255, 255, 0.14);
+
+  /* Progress bar track (unfilled portion) */
+  --bar-track: rgba(255, 255, 255, 0.07);
+
+  /* Semantic aliases */
+  --danger:  #ef4444;
+  --warning: #f97316;
+  --success: #22c55e;
+}
+
+/* Light theme overrides */
+[data-theme="light"] {
+  --bg-primary:   rgba(242, 242, 248, 0.96);
+  --bg-secondary: rgba(230, 230, 240, 0.92);
+  --bg-hover:     rgba(215, 215, 232, 0.92);
+
+  --text-primary:   rgba(8, 8, 18, 0.90);
+  --text-secondary: rgba(8, 8, 18, 0.55);
+  --text-muted:     rgba(8, 8, 18, 0.38);
+
+  --border:       rgba(0, 0, 0, 0.09);
+  --border-hover: rgba(0, 0, 0, 0.18);
+  --bar-track:    rgba(0, 0, 0, 0.08);
+}
