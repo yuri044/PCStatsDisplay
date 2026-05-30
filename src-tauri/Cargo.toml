@@ -29,8 +29,12 @@ sysinfo = "0.30"
 # The crate uses dynamic loading, so it compiles fine without an NVIDIA GPU installed.
 nvml-wrapper = { version = "0.9", optional = true }
 
+[target.'cfg(windows)'.dependencies]
+# WMI fallback for AMD / Intel integrated / NVIDIA when NVML fails (Optimus idle)
+wmi = "0.13"
+
 [features]
-# Enable NVIDIA GPU stats (add --features nvidia to cargo build to activate)
+default = ["nvidia"]
 nvidia = ["nvml-wrapper"]
 
 # Required by Tauri — do not remove

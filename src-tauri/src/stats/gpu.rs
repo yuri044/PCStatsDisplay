@@ -1,58 +1,152 @@
 // GPU statistics collector.
 //
-// This module compiles unconditionally but only produces data when:
-//   - The "nvidia" Cargo feature is enabled (adds nvml-wrapper dependency), AND
-//   - An NVIDIA driver is installed at runtime (Nvml::init() succeeds).
+// Priority:
+//   1. NVML (nvidia feature) — richest data: temp, power, accurate VRAM
+//   2. WMI (Windows only)   — covers AMD, Intel integrated, and NVIDIA when
+//      Optimus has suspended the discrete GPU (NVML init fails silently)
 //
-// For AMD / Intel integrated graphics the function returns None, and the
-// frontend hides the GPU section gracefully.
+// Returns None only when both paths fail (no recognisable GPU found).
 
 use super::types::GpuStats;
 
-/// Try to collect GPU stats from the first NVIDIA device.
-/// Returns None on any failure — missing driver, no GPU, unsupported device.
 pub fn collect() -> Option<GpuStats> {
-    collect_nvidia()
+    // NVML gives the richest data for NVIDIA.  Falls through silently on any
+    // failure (Optimus idle, driver not loaded, etc.).
+    #[cfg(feature = "nvidia")]
+    if let Some(stats) = collect_nvidia() {
+        return Some(stats);
+    }
+
+    // WMI covers AMD, Intel integrated, and NVIDIA when NVML is unavailable.
+    #[cfg(windows)]
+    return collect_wmi();
+
+    #[allow(unreachable_code)]
+    None
 }
 
-// ── NVIDIA path (compiled only when the "nvidia" feature is enabled) ──────────
+// ── NVIDIA path ───────────────────────────────────────────────────────────────
 
 #[cfg(feature = "nvidia")]
 fn collect_nvidia() -> Option<GpuStats> {
     use nvml_wrapper::{enum_wrappers::device::TemperatureSensor, Nvml};
 
-    // Init fails gracefully if NVIDIA drivers aren't installed
     let nvml = Nvml::init().ok()?;
-
-    // Use the first GPU (index 0); multi-GPU support can be added later
     let device = nvml.device_by_index(0).ok()?;
 
     let name = device.name().ok()?;
     let utilization = device.utilization_rates().ok()?;
     let memory = device.memory_info().ok()?;
     let temperature = device.temperature(TemperatureSensor::Gpu).ok()?;
-
-    // power_usage() returns milliwatts; convert to watts for display
-    let power_watts = device
-        .power_usage()
-        .ok()
-        .map(|mw| mw as f32 / 1000.0);
+    let power_watts = device.power_usage().ok().map(|mw| mw as f32 / 1000.0);
 
     Some(GpuStats {
         name,
         usage_percent: utilization.gpu,
         vram_used_bytes: memory.used,
         vram_total_bytes: memory.total,
-        temperature_c: temperature,
+        temperature_c: Some(temperature),
         power_watts,
     })
 }
 
-// ── Stub when NVIDIA feature is disabled ──────────────────────────────────────
+// ── Windows WMI fallback ──────────────────────────────────────────────────────
 
-#[cfg(not(feature = "nvidia"))]
-fn collect_nvidia() -> Option<GpuStats> {
-    // GPU stats are opt-in; without the feature flag we always return None.
-    // To enable: cargo build --features nvidia
-    None
+#[cfg(windows)]
+fn collect_wmi() -> Option<GpuStats> {
+    use serde::Deserialize;
+    use std::cell::OnceCell;
+    use wmi::{COMLibrary, WMIConnection};
+
+    // ── WMI struct definitions ─────────────────────────────────────────────
+    #[derive(Deserialize)]
+    #[allow(non_snake_case)]
+    struct VideoController {
+        Name: String,
+        // uint32 in WMI schema — overflows for GPUs > 4 GB; see vram_total note below
+        AdapterRAM: Option<u32>,
+    }
+
+    #[derive(Deserialize)]
+    #[allow(non_snake_case)]
+    struct GpuEngine {
+        Name: String,
+        UtilizationPercentage: Option<u64>,
+    }
+
+    #[derive(Deserialize)]
+    #[allow(non_snake_case)]
+    struct GpuLocalMem {
+        LocalMemoryUsage: Option<u64>,
+    }
+
+    // ── Per-thread WMI connection (initialized once, reused every 500 ms) ──
+    thread_local! {
+        static WMI: OnceCell<Option<WMIConnection>> = OnceCell::new();
+    }
+
+    WMI.with(|cell| {
+        let con = cell.get_or_init(|| {
+            // CoInitializeSecurity can only be called once per process; if
+            // Tauri already called it, fall back to without_security().
+            let com = COMLibrary::new()
+                .or_else(|_| COMLibrary::without_security())
+                .ok()?;
+            WMIConnection::new(com.into()).ok()
+        });
+
+        let wmi = con.as_ref()?;
+
+        // ── GPU name + rough VRAM total ────────────────────────────────────
+        let controllers: Vec<VideoController> = wmi
+            .raw_query("SELECT Name, AdapterRAM FROM Win32_VideoController")
+            .unwrap_or_default();
+
+        // Prefer discrete GPU; skip virtual / remote / Microsoft adapters
+        let gpu = controllers.into_iter().find(|c| {
+            let n = c.Name.to_lowercase();
+            !n.contains("virtual")
+                && !n.contains("remote")
+                && !n.contains("microsoft")
+                && c.AdapterRAM.unwrap_or(0) > 0
+        })?;
+
+        // ── 3-D engine utilisation (highest across all adapters) ───────────
+        let usage_percent: u32 = wmi
+            .raw_query::<GpuEngine>(
+                "SELECT Name, UtilizationPercentage \
+                 FROM Win32_PerfFormattedData_GPUPerformanceCounters_GPUEngine",
+            )
+            .unwrap_or_default()
+            .into_iter()
+            .filter(|e| e.Name.contains("engtype_3D"))
+            .filter_map(|e| e.UtilizationPercentage.map(|v| v as u32))
+            .max()
+            .unwrap_or(0);
+
+        // ── Dedicated VRAM in use (bytes) ──────────────────────────────────
+        let vram_used: u64 = wmi
+            .raw_query::<GpuLocalMem>(
+                "SELECT LocalMemoryUsage \
+                 FROM Win32_PerfFormattedData_GPUPerformanceCounters_GPULocalAdapterMemory",
+            )
+            .unwrap_or_default()
+            .into_iter()
+            .filter_map(|m| m.LocalMemoryUsage)
+            .max()
+            .unwrap_or(0);
+
+        // AdapterRAM is uint32 so it saturates at ~4 GB for 6/8 GB cards.
+        // For vram_used the perf counter is accurate; total is best-effort.
+        let vram_total = gpu.AdapterRAM.unwrap_or(0) as u64;
+
+        Some(GpuStats {
+            name: gpu.Name,
+            usage_percent,
+            vram_used_bytes: vram_used,
+            vram_total_bytes: vram_total,
+            temperature_c: None, // WMI has no standard GPU temp without sensor drivers
+            power_watts: None,
+        })
+    })
 }

@@ -40,7 +40,8 @@ export interface GpuStats {
   usage_percent: number;
   vram_used_bytes: number;
   vram_total_bytes: number;
-  temperature_c: number;
+  /** null when read via WMI (no sensor driver); number when read via NVML */
+  temperature_c: number | null;
   /** null if the GPU doesn't expose a power sensor */
   power_watts: number | null;
 }

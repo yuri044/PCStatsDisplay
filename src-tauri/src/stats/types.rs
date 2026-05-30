@@ -52,8 +52,8 @@ pub struct GpuStats {
     pub usage_percent: u32,
     pub vram_used_bytes: u64,
     pub vram_total_bytes: u64,
-    /// Die temperature in °C (integer as reported by NVML)
-    pub temperature_c: u32,
+    /// Die temperature in °C; None when read via WMI (requires sensor driver)
+    pub temperature_c: Option<u32>,
     /// Board power in watts; None if the GPU doesn't expose a power sensor
     pub power_watts: Option<f32>,
 }
