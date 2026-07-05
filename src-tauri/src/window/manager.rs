@@ -10,12 +10,14 @@ use tauri::{command, AppHandle, Emitter, Manager};
 /// Toggle always-on-top for the main window.
 #[command]
 pub fn set_always_on_top(app: AppHandle, enabled: bool) -> Result<(), String> {
+    tracing::info!(enabled, "Always-on-top toggled");
     let window = app
         .get_webview_window("main")
         .ok_or("main window not found")?;
-    window
-        .set_always_on_top(enabled)
-        .map_err(|e| e.to_string())
+    window.set_always_on_top(enabled).map_err(|e| {
+        tracing::error!(enabled, error = %e, "Always-on-top toggle failed");
+        e.to_string()
+    })
 }
 
 /// Set overall window opacity (0.5–1.0) by sending an event to the WebView.
@@ -24,6 +26,7 @@ pub fn set_always_on_top(app: AppHandle, enabled: bool) -> Result<(), String> {
 pub fn set_window_opacity(app: AppHandle, opacity: f64) -> Result<(), String> {
     // Clamp to a sensible range so the window never disappears completely
     let clamped = opacity.clamp(0.1, 1.0);
+    tracing::debug!(requested = opacity, clamped, "Opacity changed");
     app.emit("set-opacity", clamped).map_err(|e| e.to_string())
 }
 
@@ -32,9 +35,14 @@ pub fn set_window_opacity(app: AppHandle, opacity: f64) -> Result<(), String> {
 pub fn set_autostart<R: tauri::Runtime>(app: AppHandle<R>, enabled: bool) -> Result<(), String> {
     use tauri_plugin_autostart::ManagerExt;
     let manager = app.autolaunch();
-    if enabled {
-        manager.enable().map_err(|e| e.to_string())
+    let result = if enabled {
+        manager.enable()
     } else {
-        manager.disable().map_err(|e| e.to_string())
+        manager.disable()
+    };
+    match &result {
+        Ok(()) => tracing::info!(enabled, "Autostart toggled"),
+        Err(e) => tracing::error!(enabled, error = %e, "Autostart toggle failed"),
     }
+    result.map_err(|e| e.to_string())
 }

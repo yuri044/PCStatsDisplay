@@ -1,6 +1,14 @@
 // CPU statistics collector.
 // Uses sysinfo for usage and frequency; temperature is collected via sysinfo Components
 // which maps to OS hardware sensors (requires appropriate drivers on Windows).
+//
+// NOTE on temperature cadence: on Windows, sysinfo's Components::refresh_list()
+// does a full COM/WMI round trip on every call (CoInitializeEx, ConnectServer,
+// ExecQuery against MSAcpi_ThermalZoneTemperature) — there's no cheaper
+// "refresh in place" available from the library, so holding a persistent
+// Components instance wouldn't reduce cost. Instead, the caller (collector.rs)
+// throttles how often read_temperature() is invoked, since temperature doesn't
+// need 500ms resolution.
 
 use sysinfo::{Components, System};
 
@@ -8,7 +16,9 @@ use super::types::CpuStats;
 
 /// Collect CPU stats from an already-refreshed sysinfo System.
 /// `sys` must have been refreshed with `refresh_cpu_all()` before calling this.
-pub fn collect(sys: &System) -> CpuStats {
+/// `temperature_c` is supplied by the caller (see module docs on cadence)
+/// rather than read internally on every call.
+pub fn collect(sys: &System, temperature_c: Option<f32>) -> CpuStats {
     // Per-core usage — sysinfo returns one entry per logical processor
     let usage_per_core: Vec<f32> = sys.cpus().iter().map(|c| c.cpu_usage()).collect();
 
@@ -30,10 +40,6 @@ pub fn collect(sys: &System) -> CpuStats {
         total / sys.cpus().len() as u64
     };
 
-    // Try to read CPU package temperature from hardware sensors.
-    // On Windows this usually requires a kernel driver (e.g. OpenHardwareMonitor).
-    let temperature_c = read_cpu_temperature();
-
     CpuStats {
         usage_total,
         usage_per_core,
@@ -46,9 +52,10 @@ pub fn collect(sys: &System) -> CpuStats {
 /// Read the CPU package temperature from sysinfo's component sensor list.
 /// Returns None if no matching component is found or the reading is zero
 /// (sysinfo returns 0.0 when the sensor is inaccessible).
-fn read_cpu_temperature() -> Option<f32> {
-    // Components require their own refresh — create a fresh list each tick.
-    // This is slightly expensive but required for up-to-date readings.
+///
+/// Expensive on Windows (see module docs) — callers should throttle how often
+/// this is invoked rather than calling it on every poll tick.
+pub fn read_temperature() -> Option<f32> {
     let components = Components::new_with_refreshed_list();
 
     for component in &components {

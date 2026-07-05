@@ -27,6 +27,7 @@ interface ProcessStore {
 }
 
 export const useProcessStore = create<ProcessStore>((set, get) => ({
+  //Store process as a list
   processes: [],
   sortKey: 'cpu_usage',
   sortAsc: false,

@@ -25,6 +25,16 @@ serde_json = "1"
 # Cross-platform system stats: CPU, RAM, processes, disks, network
 sysinfo = "0.30"
 
+# Structured logging: tracing macros + subscriber, non-blocking writer,
+# and size-based rotation (tracing-appender alone only rotates by time)
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
+tracing-appender = "0.2"
+rolling-file = "0.2"
+
+# Timestamps for the synchronous panic-hook log line (bypasses tracing)
+chrono = "0.4"
+
 # NVIDIA GPU stats via NVML (optional — gracefully absent if no NVIDIA driver)
 # The crate uses dynamic loading, so it compiles fine without an NVIDIA GPU installed.
 nvml-wrapper = { version = "0.9", optional = true }

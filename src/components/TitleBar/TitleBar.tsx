@@ -7,6 +7,7 @@
 
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { invoke } from '@tauri-apps/api/core';
+import { useEffect, useState } from 'react';
 import { useSettingsStore } from '../../store/settingsStore';
 
 /** CPU icon used in the title — keeps it recognizable in the taskbar */
@@ -15,12 +16,35 @@ const APP_ICON = '⚡';
 export function TitleBar() {
   const win = getCurrentWindow();
   const { alwaysOnTop, setAlwaysOnTop } = useSettingsStore();
+  const [isMaximized, setIsMaximized] = useState(false);
 
   // Toggle AOT and persist to settings + Rust
   const handleAotToggle = () => {
     const next = !alwaysOnTop;
     setAlwaysOnTop(next);
     invoke('set_always_on_top', { enabled: next }).catch(console.error);
+  };
+
+  // Keep the maximize/restore icon in sync with actual window state —
+  // the user can also exit maximize via OS shortcuts (Win+Down, drag off top, etc).
+  useEffect(() => {
+    win.isMaximized().then(setIsMaximized).catch(console.error);
+
+    let unlisten: (() => void) | undefined;
+    win.onResized(() => {
+      win.isMaximized().then(setIsMaximized).catch(console.error);
+    }).then((fn) => {
+      unlisten = fn;
+    });
+
+    return () => unlisten?.();
+  }, [win]);
+
+  const handleMaximizeToggle = () => win.toggleMaximize();
+
+  // Open the logs folder in File Explorer so users can grab app.log easily
+  const handleOpenLogs = () => {
+    invoke('open_log_file').catch(console.error);
   };
 
   return (
@@ -46,6 +70,16 @@ export function TitleBar() {
         className="flex items-center gap-1"
         onPointerDown={(e) => e.stopPropagation()}
       >
+        {/* Open logs folder in File Explorer */}
+        <button
+          title="Open log folder"
+          onClick={handleOpenLogs}
+          className="w-5 h-5 rounded flex items-center justify-center text-xs transition-colors hover:bg-white/10"
+          style={{ color: 'var(--text-muted)', border: 'none', cursor: 'pointer', background: 'transparent' }}
+        >
+          📋
+        </button>
+
         {/* Always-on-top toggle */}
         <button
           title={alwaysOnTop ? 'Disable always on top' : 'Enable always on top'}
@@ -58,7 +92,7 @@ export function TitleBar() {
             cursor: 'pointer',
           }}
         >
-          ⊞
+          📌
         </button>
 
         {/* Minimize to tray */}
@@ -69,6 +103,16 @@ export function TitleBar() {
           style={{ color: 'var(--text-muted)', border: 'none', cursor: 'pointer', background: 'transparent' }}
         >
           —
+        </button>
+
+        {/* Maximize / restore */}
+        <button
+          title={isMaximized ? 'Restore' : 'Maximize'}
+          onClick={handleMaximizeToggle}
+          className="w-5 h-5 rounded flex items-center justify-center text-xs transition-colors hover:bg-white/10"
+          style={{ color: 'var(--text-muted)', border: 'none', cursor: 'pointer', background: 'transparent' }}
+        >
+          {isMaximized ? '❐' : '□'}
         </button>
 
         {/* Hide (not close — the tray keeps the app running) */}

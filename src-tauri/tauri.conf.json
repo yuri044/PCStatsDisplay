@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "PC Monitor",
+  "productName": "PCStatsMonitor",
   "version": "0.1.0",
   "identifier": "com.pcmonitor.app",
   "build": {
@@ -18,12 +18,11 @@
         "height": 500,
         "minWidth": 220,
         "minHeight": 200,
-        "maxWidth": 420,
         "decorations": false,
         "transparent": true,
         "alwaysOnTop": true,
         "resizable": true,
-        "shadow": false,
+        "shadow": true,
         "skipTaskbar": false,
         "center": false,
         "x": 20,

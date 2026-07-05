@@ -12,8 +12,10 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { useEffect, useState } from 'react';
 
 import { TitleBar } from './components/TitleBar/TitleBar';
+import { LogPanel } from './components/LogPanel/LogPanel';
 import { ProcessPanel } from './components/ProcessPanel/ProcessPanel';
 import { StatsPanel } from './components/StatsPanel/StatsPanel';
+import { ResizeHandles } from './components/shared/ResizeHandles';
 import { TabBar, type Tab } from './components/shared/TabBar';
 import { ToastProvider } from './components/shared/Toast';
 import { useStats } from './hooks/useStats';
@@ -48,7 +50,10 @@ export default function App() {
 
   return (
     <ToastProvider>
-      <div className="flex flex-col h-full">
+      <div className="relative flex flex-col h-full">
+        {/* Invisible edge/corner hit-areas for resizing the frameless window */}
+        <ResizeHandles />
+
         {/* Frameless custom titlebar with drag region */}
         <TitleBar />
 
@@ -69,7 +74,7 @@ export default function App() {
               >
                 <StatsPanel />
               </motion.div>
-            ) : (
+            ) : activeTab === 'processes' ? (
               <motion.div
                 key="processes"
                 className="absolute inset-0 flex flex-col"
@@ -79,6 +84,17 @@ export default function App() {
                 transition={{ duration: 0.15 }}
               >
                 <ProcessPanel />
+              </motion.div>
+            ) : (
+              <motion.div
+                key="logs"
+                className="absolute inset-0 flex flex-col"
+                initial={{ opacity: 0, x: 8 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 8 }}
+                transition={{ duration: 0.15 }}
+              >
+                <LogPanel />
               </motion.div>
             )}
           </AnimatePresence>

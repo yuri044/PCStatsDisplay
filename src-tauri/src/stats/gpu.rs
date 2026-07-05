@@ -10,19 +10,42 @@
 use super::types::GpuStats;
 
 pub fn collect() -> Option<GpuStats> {
-    // NVML gives the richest data for NVIDIA.  Falls through silently on any
-    // failure (Optimus idle, driver not loaded, etc.).
+    // Backend-selection logging: collect() runs every 500ms, so each of these
+    // fires exactly once per process lifetime instead of spamming the log.
+    #[cfg(feature = "nvidia")]
+    static NVML_UNAVAILABLE: std::sync::Once = std::sync::Once::new();
+    #[cfg(windows)]
+    static WMI_ACTIVE: std::sync::Once = std::sync::Once::new();
+    static NO_GPU: std::sync::Once = std::sync::Once::new();
+
+    // NVML gives the richest data for NVIDIA.  Falls through on any failure
+    // (Optimus idle, driver not loaded, etc.).
     #[cfg(feature = "nvidia")]
     if let Some(stats) = collect_nvidia() {
         return Some(stats);
+    } else {
+        NVML_UNAVAILABLE
+            .call_once(|| tracing::warn!("GPU NVML unavailable — trying WMI fallback"));
     }
 
     // WMI covers AMD, Intel integrated, and NVIDIA when NVML is unavailable.
     #[cfg(windows)]
-    return collect_wmi();
+    {
+        let stats = collect_wmi();
+        match &stats {
+            Some(s) => WMI_ACTIVE
+                .call_once(|| tracing::info!(name = %s.name, "GPU WMI fallback active")),
+            None => NO_GPU
+                .call_once(|| tracing::warn!("No GPU detected — hiding GPU section")),
+        }
+        return stats;
+    }
 
     #[allow(unreachable_code)]
-    None
+    {
+        NO_GPU.call_once(|| tracing::warn!("No GPU detected — hiding GPU section"));
+        None
+    }
 }
 
 // ── NVIDIA path ───────────────────────────────────────────────────────────────
@@ -83,6 +106,9 @@ fn collect_wmi() -> Option<GpuStats> {
     // ── Per-thread WMI connection (initialized once, reused every 500 ms) ──
     thread_local! {
         static WMI: OnceCell<Option<WMIConnection>> = OnceCell::new();
+        // GPU name + VRAM total are static hardware facts that never change at
+        // runtime — queried once and cached instead of re-hitting WMI every tick.
+        static STATIC_INFO: OnceCell<Option<(String, u64)>> = OnceCell::new();
     }
 
     WMI.with(|cell| {
@@ -97,19 +123,24 @@ fn collect_wmi() -> Option<GpuStats> {
 
         let wmi = con.as_ref()?;
 
-        // ── GPU name + rough VRAM total ────────────────────────────────────
-        let controllers: Vec<VideoController> = wmi
-            .raw_query("SELECT Name, AdapterRAM FROM Win32_VideoController")
-            .unwrap_or_default();
+        // ── GPU name + rough VRAM total (queried once, then cached) ────────
+        let (name, vram_total) = STATIC_INFO
+            .with(|info| {
+                info.get_or_init(|| {
+                    let controllers: Vec<VideoController> = wmi
+                        .raw_query("SELECT Name, AdapterRAM FROM Win32_VideoController")
+                        .unwrap_or_default();
 
-        // Prefer discrete GPU; skip virtual / remote / Microsoft adapters
-        let gpu = controllers.into_iter().find(|c| {
-            let n = c.Name.to_lowercase();
-            !n.contains("virtual")
-                && !n.contains("remote")
-                && !n.contains("microsoft")
-                && c.AdapterRAM.unwrap_or(0) > 0
-        })?;
+                    // Prefer discrete GPU; skip virtual / remote / Microsoft adapters
+                    controllers.into_iter().find_map(|c| {
+                        let n = c.Name.to_lowercase();
+                        let ram = c.AdapterRAM.unwrap_or(0);
+                        (!n.contains("virtual") && !n.contains("remote") && !n.contains("microsoft") && ram > 0)
+                            .then(|| (c.Name, ram as u64))
+                    })
+                })
+                .clone()
+            })?;
 
         // ── 3-D engine utilisation (highest across all adapters) ───────────
         let usage_percent: u32 = wmi
@@ -138,10 +169,8 @@ fn collect_wmi() -> Option<GpuStats> {
 
         // AdapterRAM is uint32 so it saturates at ~4 GB for 6/8 GB cards.
         // For vram_used the perf counter is accurate; total is best-effort.
-        let vram_total = gpu.AdapterRAM.unwrap_or(0) as u64;
-
         Some(GpuStats {
-            name: gpu.Name,
+            name,
             usage_percent,
             vram_used_bytes: vram_used,
             vram_total_bytes: vram_total,

@@ -1,27 +1,28 @@
 // Process enumeration command.
 //
-// get_process_list is a synchronous Tauri command that creates a fresh
-// sysinfo System, refreshes only process data, and returns a snapshot.
-// It is invoked on-demand (not on every 500ms tick) to keep overhead low.
+// get_process_list is a synchronous Tauri command that reads from a
+// long-lived sysinfo System (held in Tauri-managed state) rather than
+// building a fresh one on every call. Reusing the same System means CPU-usage
+// deltas are already meaningful from the natural gap between polls (the
+// frontend calls this every 3s while the Processes tab is open), so there's
+// no need to block the command thread with an artificial warm-up sleep.
+
+use std::sync::Mutex;
 
 use sysinfo::System;
-use tauri::command;
+use tauri::{command, State};
 
 use super::types::ProcessInfo;
 
 /// Return a snapshot of all currently-running processes with CPU, RAM, and status.
 /// Invoked from React via: invoke<ProcessInfo[]>('get_process_list')
 #[command]
-pub fn get_process_list() -> Vec<ProcessInfo> {
-    let mut sys = System::new();
-
-    // Two refreshes so CPU usage deltas are non-zero
-    sys.refresh_processes();
-    // Small sleep between two refreshes for accurate CPU snapshot
-    std::thread::sleep(std::time::Duration::from_millis(100));
+pub fn get_process_list(state: State<'_, Mutex<System>>) -> Vec<ProcessInfo> {
+    let mut sys = state.lock().expect("process list sys lock poisoned");
     sys.refresh_processes();
 
-    sys.processes()
+    let list: Vec<ProcessInfo> = sys
+        .processes()
         .values()
         .map(|p| ProcessInfo {
             pid: p.pid().as_u32(),
@@ -35,5 +36,8 @@ pub fn get_process_list() -> Vec<ProcessInfo> {
                 .map(|path| path.to_string_lossy().into_owned())
                 .unwrap_or_default(),
         })
-        .collect()
+        .collect();
+
+    tracing::debug!(count = list.len(), "Process list fetched");
+    list
 }

@@ -29,9 +29,12 @@ pub fn setup_tray(app: &tauri::App) -> tauri::Result<()> {
         .tooltip("PC Monitor")
         // Context menu click handler
         .on_menu_event(|app, event| match event.id.as_ref() {
-            "show" => toggle_window_visibility(app),
+            "show" => toggle_window_visibility(app, "menu"),
             "aot" => toggle_always_on_top(app),
-            "quit" => app.exit(0),
+            "quit" => {
+                tracing::info!("App exiting via tray Quit");
+                app.exit(0)
+            }
             _ => {}
         })
         // Double-click tray icon to show/hide
@@ -41,7 +44,7 @@ pub fn setup_tray(app: &tauri::App) -> tauri::Result<()> {
                 ..
             } = event
             {
-                toggle_window_visibility(tray.app_handle());
+                toggle_window_visibility(tray.app_handle(), "double-click");
             }
         })
         .build(app)?;
@@ -50,11 +53,13 @@ pub fn setup_tray(app: &tauri::App) -> tauri::Result<()> {
 }
 
 /// Toggle the main window between visible and hidden.
-fn toggle_window_visibility(app: &tauri::AppHandle) {
+fn toggle_window_visibility(app: &tauri::AppHandle, source: &str) {
     if let Some(window) = app.get_webview_window("main") {
         if window.is_visible().unwrap_or(false) {
+            tracing::debug!(source, "Window hidden (tray)");
             let _ = window.hide();
         } else {
+            tracing::debug!(source, "Window shown (tray)");
             let _ = window.show();
             let _ = window.set_focus();
         }
@@ -66,6 +71,7 @@ fn toggle_always_on_top(app: &tauri::AppHandle) {
     if let Some(window) = app.get_webview_window("main") {
         // Flip the current state
         let current = window.is_always_on_top().unwrap_or(false);
+        tracing::debug!(new_state = !current, "AOT toggled from tray");
         let _ = window.set_always_on_top(!current);
     }
 }
