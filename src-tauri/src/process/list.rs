@@ -21,13 +21,20 @@ pub fn get_process_list(state: State<'_, Mutex<System>>) -> Vec<ProcessInfo> {
     let mut sys = state.lock().expect("process list sys lock poisoned");
     sys.refresh_processes();
 
+    // sysinfo's Process::cpu_usage() is scaled so 100% == one fully-saturated
+    // logical core (it can exceed 100% for multi-threaded processes). Task
+    // Manager instead reports usage as a share of total system capacity, so a
+    // process pegging one thread on an 8-core/16-thread machine reads ~100%
+    // here but only ~6% there. Divide by the logical core count to match.
+    let core_count = sys.cpus().len().max(1) as f32;
+
     let list: Vec<ProcessInfo> = sys
         .processes()
         .values()
         .map(|p| ProcessInfo {
             pid: p.pid().as_u32(),
             name: p.name().to_string(),
-            cpu_usage: p.cpu_usage(),
+            cpu_usage: p.cpu_usage() / core_count,
             memory_bytes: p.memory(),
             status: format!("{:?}", p.status()),
             parent_pid: p.parent().map(|pid| pid.as_u32()),

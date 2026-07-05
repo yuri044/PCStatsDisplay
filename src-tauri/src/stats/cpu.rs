@@ -68,5 +68,56 @@ pub fn read_temperature() -> Option<f32> {
             }
         }
     }
+
+    #[cfg(windows)]
+    if let Some(temp) = read_temperature_lhm() {
+        return Some(temp);
+    }
+
     None
 }
+
+
+/// Fallback CPU temperature source: LibreHardwareMonitor publishes live sensor
+/// readings through its own WMI namespace while running as Administrator.
+/// Returns None if LHM isn't installed/running — sysinfo's ACPI path above is
+/// tried first since it needs no extra software when it happens to work.
+#[cfg(windows)]
+fn read_temperature_lhm() -> Option<f32> {
+    use serde::Deserialize;
+    use std::cell::OnceCell;
+    use wmi::{COMLibrary, WMIConnection};
+
+    #[derive(Deserialize)]
+    #[allow(non_snake_case)]
+    struct Sensor {
+        Identifier: String,
+        Value: f32,
+    }
+
+    thread_local! {
+        static LHM_WMI: OnceCell<Option<WMIConnection>> = OnceCell::new();
+    }
+
+    LHM_WMI.with(|cell| {
+        let con = cell.get_or_init(|| {
+            let com = COMLibrary::new()
+                .or_else(|_| COMLibrary::without_security())
+                .ok()?;
+            WMIConnection::with_namespace_path("root\\LibreHardwareMonitor", com.into()).ok()
+        });
+
+        let wmi = con.as_ref()?;
+        let sensors: Vec<Sensor> = wmi
+            .raw_query("SELECT Identifier, Value FROM Sensor WHERE SensorType = 'Temperature'")
+            .unwrap_or_default();
+
+        // "/intelcpu/0/temperature/0" (or amdcpu) is LHM's CPU package sensor
+        sensors
+            .into_iter()
+            .find(|s| s.Identifier.contains("cpu/0/temperature/0"))
+            .map(|s| s.Value)
+    })
+}
+
+    
