@@ -3,12 +3,38 @@
 // than re-rendering the whole table on every update.
 
 import type { ProcessInfo } from '../../types/process';
+import { useProcessIcon } from '../../hooks/useProcessIcon';
 
 /** Format bytes into a short human-readable string */
 function fmtMem(bytes: number): string {
   if (bytes < 1024 ** 2) return `${(bytes / 1024).toFixed(0)} K`;
   if (bytes < 1024 ** 3) return `${(bytes / 1024 ** 2).toFixed(1)} M`;
   return `${(bytes / 1024 ** 3).toFixed(2)} G`;
+}
+
+/** Generic placeholder shown while an icon is loading or unavailable. */
+function FallbackIcon() {
+  return (
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 16 16"
+      className="shrink-0"
+      style={{ color: 'var(--text-muted)' }}
+    >
+      <rect
+        x="1.5"
+        y="1.5"
+        width="13"
+        height="13"
+        rx="3"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.3"
+      />
+      <rect x="5" y="5" width="6" height="6" rx="1" fill="currentColor" opacity="0.6" />
+    </svg>
+  );
 }
 
 interface Props {
@@ -24,6 +50,8 @@ export function ProcessRow({ process, style, onKill }: Props) {
     process.status === 'Run' ? 'var(--accent-green)'
     : process.status === 'Sleep' ? 'var(--accent-blue)'
     : 'var(--text-muted)';
+
+  const icon = useProcessIcon(process.exe_path);
 
   return (
     <div
@@ -44,6 +72,13 @@ export function ProcessRow({ process, style, onKill }: Props) {
         className="w-1.5 h-1.5 rounded-full shrink-0"
         style={{ background: statusColor }}
       />
+
+      {/* App icon — extracted from the .exe, cached per exe_path */}
+      {icon ? (
+        <img src={icon} alt="" width={14} height={14} className="shrink-0" />
+      ) : (
+        <FallbackIcon />
+      )}
 
       {/* Process name — truncated with tooltip showing full name + path */}
       <span

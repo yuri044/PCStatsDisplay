@@ -29,6 +29,9 @@ pub fn run() {
         // Long-lived System for get_process_list — reused across polls so CPU
         // deltas are meaningful without an artificial per-call warm-up sleep.
         .manage(Mutex::new(System::new_all()))
+        // Icon cache keyed by exe_path — extraction is expensive, so each
+        // unique executable is only ever processed once per app session.
+        .manage(process::icon::new_cache())
         .setup(|app| {
             // Init logging FIRST so everything after it is captured.
             // The WorkerGuard must live as long as the app — dropping it stops
@@ -55,6 +58,7 @@ pub fn run() {
         // Register all commands that the React frontend can invoke()
         .invoke_handler(tauri::generate_handler![
             process::list::get_process_list,
+            process::icon::get_process_icon,
             process::kill::kill_process,
             process::kill::kill_process_elevated,
             window::manager::set_always_on_top,

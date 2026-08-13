@@ -39,9 +39,22 @@ chrono = "0.4"
 # The crate uses dynamic loading, so it compiles fine without an NVIDIA GPU installed.
 nvml-wrapper = { version = "0.9", optional = true }
 
+# Process icon extraction: PNG-encode the RGBA buffer pulled from each .exe's
+# icon, then hand the frontend a ready-to-use data URI.
+image = { version = "0.25", default-features = false, features = ["png"] }
+base64 = "0.22"
+
 [target.'cfg(windows)'.dependencies]
 # WMI fallback for AMD / Intel integrated / NVIDIA when NVML fails (Optimus idle)
 wmi = "0.13"
+# Win32 APIs for extracting per-process .exe icons (SHGetFileInfoW + GDI)
+windows = { version = "0.58", features = [
+    "Win32_UI_Shell",
+    "Win32_UI_WindowsAndMessaging",
+    "Win32_Graphics_Gdi",
+    "Win32_Foundation",
+    "Win32_Storage_FileSystem",
+] }
 
 [features]
 default = ["nvidia"]
