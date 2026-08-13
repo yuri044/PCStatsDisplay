@@ -6,3 +6,4 @@
 fn main() {
     pc_monitor_lib::run()
 }
+// Forced rebuild to update icon
