@@ -15,6 +15,7 @@ import { TitleBar } from './components/TitleBar/TitleBar';
 import { LogPanel } from './components/LogPanel/LogPanel';
 import { ProcessPanel } from './components/ProcessPanel/ProcessPanel';
 import { StatsPanel } from './components/StatsPanel/StatsPanel';
+import { CmdTerminal } from './components/CmdTerminal/CmdTerminal';
 import { ResizeHandles } from './components/shared/ResizeHandles';
 import { TabBar, type Tab } from './components/shared/TabBar';
 import { ToastProvider } from './components/shared/Toast';
@@ -23,6 +24,7 @@ import { useWindow } from './hooks/useWindow';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<Tab>('stats');
+  const [isTerminalOpen, setIsTerminalOpen] = useState(false);
 
   // Start the Tauri event subscription for live stats
   useStats();
@@ -48,9 +50,26 @@ export default function App() {
     return () => unlisten?.();
   }, []);
 
+  // Global shortcut to toggle the CMD terminal (` key)
+  useEffect(() => {
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      // Don't toggle if we're typing in a regular input that isn't the terminal itself
+      // We handle the ` key in CmdTerminal.tsx to close it.
+      if (e.key === '`') {
+        e.preventDefault();
+        setIsTerminalOpen(prev => !prev);
+      }
+    };
+    window.addEventListener('keydown', handleGlobalKeyDown);
+    return () => window.removeEventListener('keydown', handleGlobalKeyDown);
+  }, []);
+
   return (
     <ToastProvider>
       <div className="relative flex flex-col h-full">
+        {/* Drop-down command terminal */}
+        <CmdTerminal isOpen={isTerminalOpen} onClose={() => setIsTerminalOpen(false)} />
+
         {/* Invisible edge/corner hit-areas for resizing the frameless window */}
         <ResizeHandles />
 
