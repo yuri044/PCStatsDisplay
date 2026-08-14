@@ -2,7 +2,7 @@
   <img src="src-tauri/icons/Stats.jpg" alt="PC Stats Monitor icon" width="180">
 </p>
 
-<h1 align="center">PC Stats Monitor</h1>
+<h1 align="center">STATS AGENT</h1>
 
 <p align="center">
   <img alt="Tauri" src="https://img.shields.io/badge/Tauri-2-24C8DB?logo=tauri&logoColor=white">
@@ -147,17 +147,20 @@ graph TD
 ### Key data flows
 
 **Live stats stream (unidirectional push).** To maintain a target < 1% idle CPU usage, metrics collection avoids polling from the frontend entirely:
+
 - `src-tauri/src/stats/collector.rs` spawns a dedicated OS thread on startup. Every 500ms it queries the `cpu`, `memory`, `gpu`, `disk`, and `network` sub-collectors and emits a `stats-update` event with a consolidated `SystemStats` payload.
 - `src/store/statsStore.ts` listens for `stats-update` via Tauri's `listen` API, updating current values and appending to rolling `cpuHistory` / `ramHistory` charts (buffered to 60 points / 30 seconds).
 - `src/hooks/useStats.ts` wraps the subscription, managing listener setup on mount and teardown on unmount.
 
 **Process management & privilege escalation (UAC flow).**
+
 - `src/hooks/useProcesses.ts` requests the process list through `processStore.ts`, which invokes `get_process_list` — handled by `src-tauri/src/process/list.rs` via the `sysinfo` crate.
 - Standard processes are killed directly through the `kill_process` command (`src-tauri/src/process/kill.rs`).
 - If that returns access-denied, the UI shows `KillConfirmModal.tsx` prompting elevation. On confirmation, `kill_process_elevated` spawns `elevated-helper.exe` via `Start-Process -Verb RunAs -WindowStyle Hidden`, triggering the Windows UAC prompt. Once approved, the helper terminates the PID with admin rights and exits.
 - Protected SYSTEM processes (`lsass.exe`, `csrss.exe`, etc.) are blocked from termination entirely.
 
 **Window & settings management.**
+
 - `src/store/settingsStore.ts` persists theme, opacity, always-on-top, and autostart preferences to `localStorage`.
 - `src/hooks/useWindow.ts` syncs those settings to the backend (`src-tauri/src/window/manager.rs`), which toggles `always_on_top`, writes the autostart registry key, and applies opacity via a `set-opacity` event consumed as a CSS variable (`--app-opacity`) in `App.tsx`.
 
@@ -193,6 +196,7 @@ This produces a signed installer under `src-tauri/target/release/bundle/`.
 
 > [!TIP]
 > The elevated-helper executable used for admin-level process termination builds automatically as part of `npm run tauri build`. To build it on its own (e.g. while iterating on UAC logic), run:
+>
 > ```bash
 > cd elevated-helper && cargo build --release
 > ```
@@ -220,4 +224,5 @@ This produces a signed installer under `src-tauri/target/release/bundle/`.
 > "Always on Top" may not stay above certain exclusive-mode fullscreen games, due to how Windows handles that mode at the OS level.
 
 ---
-*Built with Tauri.*
+
+_Built with Tauri._
