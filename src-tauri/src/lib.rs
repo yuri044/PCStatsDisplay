@@ -8,6 +8,7 @@ mod process;
 mod stats;
 mod window;
 mod shell;
+mod system_info;
 
 use std::sync::Mutex;
 
@@ -68,6 +69,7 @@ pub fn run() {
             logger_command::open_log_file,
             logger_command::read_log_tail,
             shell::execute_shell_command,
+            system_info::get_system_info,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

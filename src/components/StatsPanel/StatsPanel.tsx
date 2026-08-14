@@ -7,7 +7,7 @@ import { StatRow } from './StatRow';
 import { TempRing } from './TempRing';
 
 /** Format bytes to a human-readable string (KB, MB, GB) */
-function fmtBytes(bytes: number): string {
+export function fmtBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 ** 2) return `${(bytes / 1024).toFixed(0)} KB`;
   if (bytes < 1024 ** 3) return `${(bytes / 1024 ** 2).toFixed(1)} MB`;
