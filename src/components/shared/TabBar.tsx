@@ -1,9 +1,9 @@
-// Tab bar for switching between the Stats, Processes, and Logs views.
+// Tab bar for switching between the Stats, Processes, Logs, and Terminal views.
 // The active indicator is a sliding underline animated with Framer Motion layoutId.
 
 import { motion } from 'framer-motion';
 
-export type Tab = 'stats' | 'processes' | 'logs';
+export type Tab = 'stats' | 'processes' | 'logs' | 'terminal';
 
 interface Props {
   active: Tab;
@@ -14,6 +14,7 @@ const TABS: { id: Tab; label: string }[] = [
   { id: 'stats', label: 'Stats' },
   { id: 'processes', label: 'Processes' },
   { id: 'logs', label: 'Logs' },
+  { id: 'terminal', label: 'Terminal' }
 ];
 
 export function TabBar({ active, onChange }: Props) {

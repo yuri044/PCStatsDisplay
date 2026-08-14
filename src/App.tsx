@@ -24,7 +24,6 @@ import { useWindow } from './hooks/useWindow';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<Tab>('stats');
-  const [isTerminalOpen, setIsTerminalOpen] = useState(false);
 
   // Start the Tauri event subscription for live stats
   useStats();
@@ -50,26 +49,9 @@ export default function App() {
     return () => unlisten?.();
   }, []);
 
-  // Global shortcut to toggle the CMD terminal (` key)
-  useEffect(() => {
-    const handleGlobalKeyDown = (e: KeyboardEvent) => {
-      // Don't toggle if we're typing in a regular input that isn't the terminal itself
-      // We handle the ` key in CmdTerminal.tsx to close it.
-      if (e.key === '`') {
-        e.preventDefault();
-        setIsTerminalOpen(prev => !prev);
-      }
-    };
-    window.addEventListener('keydown', handleGlobalKeyDown);
-    return () => window.removeEventListener('keydown', handleGlobalKeyDown);
-  }, []);
-
   return (
     <ToastProvider>
       <div className="relative flex flex-col h-full">
-        {/* Drop-down command terminal */}
-        <CmdTerminal isOpen={isTerminalOpen} onClose={() => setIsTerminalOpen(false)} />
-
         {/* Invisible edge/corner hit-areas for resizing the frameless window */}
         <ResizeHandles />
 
@@ -104,7 +86,7 @@ export default function App() {
               >
                 <ProcessPanel />
               </motion.div>
-            ) : (
+            ) : activeTab === 'logs' ? (
               <motion.div
                 key="logs"
                 className="absolute inset-0 flex flex-col"
@@ -114,6 +96,17 @@ export default function App() {
                 transition={{ duration: 0.15 }}
               >
                 <LogPanel />
+              </motion.div>
+            ) : (
+              <motion.div
+                key="terminal"
+                className="absolute inset-0 flex flex-col"
+                initial={{ opacity: 0, x: 8 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 8 }}
+                transition={{ duration: 0.15 }}
+              >
+                <CmdTerminal />
               </motion.div>
             )}
           </AnimatePresence>

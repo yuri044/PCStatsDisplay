@@ -1,11 +1,10 @@
 import { useState, useRef, useEffect } from 'react';
-import { motion } from 'framer-motion';
 import { invoke } from '@tauri-apps/api/core';
 
 interface CommandResult {
   stdout: string;
   stderr: string;
-  success: bool;
+  success: boolean;
   code: number | null;
 }
 
@@ -15,12 +14,7 @@ interface LogEntry {
   isError: boolean;
 }
 
-interface CmdTerminalProps {
-  isOpen: boolean;
-  onClose: () => void;
-}
-
-export function CmdTerminal({ isOpen, onClose }: CmdTerminalProps) {
+export function CmdTerminal() {
   const [command, setCommand] = useState('');
   const [history, setHistory] = useState<LogEntry[]>([]);
   const [commandHistory, setCommandHistory] = useState<string[]>([]);
@@ -29,12 +23,10 @@ export function CmdTerminal({ isOpen, onClose }: CmdTerminalProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // Auto-focus input when opened
+  // Auto-focus input when the tab mounts
   useEffect(() => {
-    if (isOpen) {
-      setTimeout(() => inputRef.current?.focus(), 100);
-    }
-  }, [isOpen]);
+    inputRef.current?.focus();
+  }, []);
 
   // Auto-scroll to bottom on new history
   useEffect(() => {
@@ -44,18 +36,6 @@ export function CmdTerminal({ isOpen, onClose }: CmdTerminalProps) {
   }, [history]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === '`') {
-      e.preventDefault();
-      onClose();
-      return;
-    }
-    
-    if (e.key === 'Escape') {
-      e.preventDefault();
-      onClose();
-      return;
-    }
-
     if (e.key === 'Enter') {
       executeCommand();
     } else if (e.key === 'ArrowUp') {
@@ -118,29 +98,32 @@ export function CmdTerminal({ isOpen, onClose }: CmdTerminalProps) {
   };
 
   return (
-    <motion.div
-      initial={{ y: '-100%', opacity: 0 }}
-      animate={{ 
-        y: isOpen ? 0 : '-100%', 
-        opacity: isOpen ? 1 : 0 
-      }}
-      transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-      className="absolute top-0 left-0 right-0 z-50 flex flex-col bg-black/90 backdrop-blur-md border-b border-white/10 shadow-2xl h-[50vh] max-h-[500px]"
+    <div
+      className="flex flex-col flex-1 overflow-hidden"
+      style={{ background: 'var(--bg-secondary)' }}
     >
-      <div 
+      <div
         ref={scrollRef}
-        className="flex-1 overflow-y-auto p-4 space-y-2 font-mono text-sm selection:bg-white/20"
+        className="flex-1 overflow-y-auto p-4 space-y-2 font-mono text-sm"
       >
         {history.length === 0 ? (
-          <div className="text-white/40 italic">Terminal ready. Type a command...</div>
+          <div className="italic" style={{ color: 'var(--text-muted)' }}>
+            Terminal ready. Type a command...
+          </div>
         ) : (
           history.map((entry, idx) => (
             <div key={idx} className="break-words">
-              <div className="text-emerald-400 font-bold tracking-tight shrink-0 flex gap-2">
-                <span className="text-emerald-500/50">❯</span>
+              <div
+                className="font-bold tracking-tight shrink-0 flex gap-2"
+                style={{ color: 'var(--text-primary)' }}
+              >
+                <span style={{ color: 'var(--accent-green)' }}>❯</span>
                 {entry.command}
               </div>
-              <div className={`mt-1 whitespace-pre-wrap ${entry.isError ? 'text-rose-400' : 'text-gray-300'}`}>
+              <div
+                className="mt-1 whitespace-pre-wrap"
+                style={{ color: entry.isError ? 'var(--accent-red)' : 'var(--text-primary)' }}
+              >
                 {entry.output}
               </div>
             </div>
@@ -148,8 +131,16 @@ export function CmdTerminal({ isOpen, onClose }: CmdTerminalProps) {
         )}
       </div>
 
-      <div className="h-12 border-t border-white/10 flex items-center px-4 bg-black/40 shrink-0">
-        <span className="text-emerald-500 mr-3 font-mono font-bold">❯</span>
+      <div
+        className="h-12 flex items-center px-4 shrink-0"
+        style={{ borderTop: '1px solid var(--border)' }}
+      >
+        <span
+          className="mr-3 font-mono font-bold"
+          style={{ color: 'var(--accent-green)' }}
+        >
+          ❯
+        </span>
         <input
           ref={inputRef}
           type="text"
@@ -158,9 +149,10 @@ export function CmdTerminal({ isOpen, onClose }: CmdTerminalProps) {
           onKeyDown={handleKeyDown}
           disabled={isRunning}
           placeholder={isRunning ? "Executing..." : "Enter command..."}
-          className="flex-1 bg-transparent border-none outline-none text-white font-mono placeholder:text-white/20 disabled:opacity-50"
+          className="flex-1 bg-transparent border-none outline-none font-mono disabled:opacity-50"
+          style={{ color: 'var(--text-primary)' }}
         />
       </div>
-    </motion.div>
+    </div>
   );
 }
