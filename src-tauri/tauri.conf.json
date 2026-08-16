@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "PCStatsMonitor",
+  "productName": "Watch Agent",
   "version": "0.1.0",
   "identifier": "com.pcmonitor.app",
   "build": {
@@ -13,7 +13,7 @@
     "windows": [
       {
         "label": "main",
-        "title": "PC Monitor",
+        "title": "Watch Agent",
         "width": 350,
         "height": 500,
         "minWidth": 220,

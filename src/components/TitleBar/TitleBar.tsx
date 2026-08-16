@@ -9,9 +9,15 @@ import { getCurrentWindow } from '@tauri-apps/api/window';
 import { invoke } from '@tauri-apps/api/core';
 import { useEffect, useState } from 'react';
 import { useSettingsStore } from '../../store/settingsStore';
-
-/** CPU icon used in the title — keeps it recognizable in the taskbar */
-const APP_ICON = '⚡';
+import {
+  AppMarkIcon,
+  CloseIcon,
+  LogsIcon,
+  MaximizeIcon,
+  MinimizeIcon,
+  PinIcon,
+  RestoreIcon,
+} from '../icons/icons';
 
 export function TitleBar() {
   const win = getCurrentWindow();
@@ -59,10 +65,11 @@ export function TitleBar() {
     >
       {/* App identity */}
       <span
-        className="text-xs font-semibold tracking-widest"
+        className="flex items-center gap-1.5 text-xs font-semibold tracking-widest"
         style={{ color: 'var(--text-secondary)', letterSpacing: '0.12em' }}
       >
-        {APP_ICON} PC MONITOR
+        <AppMarkIcon size={12} />
+        PC MONITOR
       </span>
 
       {/* Window controls — must stop propagation so drag doesn't trigger */}
@@ -77,7 +84,7 @@ export function TitleBar() {
           className="w-5 h-5 rounded flex items-center justify-center text-xs transition-colors hover:bg-white/10"
           style={{ color: 'var(--text-muted)', border: 'none', cursor: 'pointer', background: 'transparent' }}
         >
-          📋
+          <LogsIcon size={13} />
         </button>
 
         {/* Always-on-top toggle */}
@@ -92,7 +99,7 @@ export function TitleBar() {
             cursor: 'pointer',
           }}
         >
-          📌
+          <PinIcon size={13} />
         </button>
 
         {/* Minimize to tray */}
@@ -102,7 +109,7 @@ export function TitleBar() {
           className="w-5 h-5 rounded flex items-center justify-center text-xs transition-colors hover:bg-white/10"
           style={{ color: 'var(--text-muted)', border: 'none', cursor: 'pointer', background: 'transparent' }}
         >
-          —
+          <MinimizeIcon size={13} />
         </button>
 
         {/* Maximize / restore */}
@@ -112,7 +119,7 @@ export function TitleBar() {
           className="w-5 h-5 rounded flex items-center justify-center text-xs transition-colors hover:bg-white/10"
           style={{ color: 'var(--text-muted)', border: 'none', cursor: 'pointer', background: 'transparent' }}
         >
-          {isMaximized ? '❐' : '□'}
+          {isMaximized ? <RestoreIcon size={12} /> : <MaximizeIcon size={12} />}
         </button>
 
         {/* Hide (not close — the tray keeps the app running) */}
@@ -122,7 +129,7 @@ export function TitleBar() {
           className="w-5 h-5 rounded flex items-center justify-center text-xs transition-colors hover:bg-red-500/20"
           style={{ color: 'var(--text-muted)', border: 'none', cursor: 'pointer', background: 'transparent' }}
         >
-          ✕
+          <CloseIcon size={13} />
         </button>
       </div>
     </div>
