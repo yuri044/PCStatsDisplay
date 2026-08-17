@@ -24,7 +24,7 @@ export function TabBar({ active, onChange }: Props) {
         <button
           key={id}
           onClick={() => onChange(id)}
-          className="relative flex-1 py-2 text-xs font-medium tracking-wide transition-colors"
+          className="relative flex-1 py-2 text-xs font-dot tracking-wide transition-colors"
           style={{
             color: active === id ? 'var(--text-primary)' : 'var(--text-muted)',
             background: 'none',

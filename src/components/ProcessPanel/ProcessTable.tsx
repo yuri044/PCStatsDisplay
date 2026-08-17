@@ -68,7 +68,7 @@ export function ProcessTable({ processes, sortKey, sortAsc, onSort, onKill }: Pr
           <button
             key={col.key}
             onClick={() => onSort(col.key)}
-            className={`text-[9px] font-semibold uppercase tracking-widest text-right shrink-0 ${col.width}`}
+            className={`text-[9px] font-dot uppercase tracking-widest text-right shrink-0 ${col.width}`}
             style={{
               background: 'none',
               border: 'none',

@@ -53,7 +53,7 @@ export function StatRow({ label, value, displayValue, history, color, subtitle, 
             <SparkLine data={history} color={color} width={48} height={14} />
           )}
           <span
-            className="text-xs font-mono tabular-nums"
+            className="text-[13px] font-mono tabular-nums font-dot"
             style={{ color: 'var(--text-primary)', minWidth: '3.5rem', textAlign: 'right' }}
           >
             {displayValue}

@@ -65,11 +65,11 @@ export function TitleBar() {
     >
       {/* App identity */}
       <span
-        className="flex items-center gap-1.5 text-xs font-semibold tracking-widest"
+        className="flex items-center gap-1.5 text-xs font-dot tracking-widest"
         style={{ color: 'var(--text-secondary)', letterSpacing: '0.12em' }}
       >
         <AppMarkIcon size={12} />
-        PC MONITOR
+        STATS AGENT
       </span>
 
       {/* Window controls — must stop propagation so drag doesn't trigger */}

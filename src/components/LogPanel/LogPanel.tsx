@@ -213,20 +213,20 @@ export function LogPanel() {
             >
               {l.level ? (
                 <>
-                  <span className="shrink-0 tabular-nums" style={{ color: 'var(--text-muted)' }}>
+                  <span className="shrink-0 tabular-nums font-dot" style={{ color: 'var(--text-muted)' }}>
                     {l.time}
                   </span>
                   <span
-                    className="shrink-0 w-10 font-semibold"
+                    className="shrink-0 w-10 font-dot"
                     style={{ color: LEVEL_COLOR[l.level] }}
                   >
                     {l.level}
                   </span>
-                  <span className="shrink-0" style={{ color: 'var(--text-muted)' }}>
+                  <span className="shrink-0 font-dot" style={{ color: 'var(--text-muted)' }}>
                     {l.target}
                   </span>
                   <span
-                    className="truncate"
+                    className="truncate font-dot"
                     style={{
                       color: l.level === 'ERROR' || l.level === 'WARN'
                         ? LEVEL_COLOR[l.level]
@@ -238,7 +238,7 @@ export function LogPanel() {
                 </>
               ) : (
                 // Unparseable line (e.g. panic continuation) — show raw, dimmed
-                <span className="truncate" style={{ color: 'var(--text-muted)' }}>
+                <span className="truncate font-dot" style={{ color: 'var(--text-muted)' }}>
                   {l.raw}
                 </span>
               )}

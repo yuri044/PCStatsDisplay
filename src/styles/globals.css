@@ -4,6 +4,12 @@
 /* Theme tokens */
 @import "./theme.css";
 
+/* Dot-matrix font utility — applied wherever the Nothing-inspired
+   typography pass opts an element into DotGothic16 */
+.font-dot {
+  font-family: var(--font-dot);
+}
+
 /* ── Reset ────────────────────────────────────────────────────────────── */
 *, *::before, *::after {
   box-sizing: border-box;

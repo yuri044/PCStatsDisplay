@@ -82,7 +82,7 @@ export function ProcessRow({ process, style, onKill }: Props) {
 
       {/* Process name — truncated with tooltip showing full name + path */}
       <span
-        className="flex-1 text-[11px] truncate"
+        className="flex-1 text-[11px] truncate font-dot"
         style={{ color: 'var(--text-primary)' }}
         title={`${process.name}\n${process.exe_path}`}
       >
@@ -91,7 +91,7 @@ export function ProcessRow({ process, style, onKill }: Props) {
 
       {/* PID */}
       <span
-        className="text-[10px] tabular-nums w-10 text-right shrink-0"
+        className="text-[10px] tabular-nums w-10 text-right shrink-0 font-dot"
         style={{ color: 'var(--text-muted)' }}
       >
         {process.pid}
@@ -99,7 +99,7 @@ export function ProcessRow({ process, style, onKill }: Props) {
 
       {/* CPU usage */}
       <span
-        className="text-[10px] tabular-nums w-10 text-right shrink-0 font-medium"
+        className="text-[10px] tabular-nums w-10 text-right shrink-0 font-dot"
         style={{
           color:
             process.cpu_usage > 20
@@ -112,7 +112,7 @@ export function ProcessRow({ process, style, onKill }: Props) {
 
       {/* Memory */}
       <span
-        className="text-[10px] tabular-nums w-12 text-right shrink-0"
+        className="text-[10px] tabular-nums w-12 text-right shrink-0 font-dot"
         style={{ color: 'var(--text-secondary)' }}
       >
         {fmtMem(process.memory_bytes)}

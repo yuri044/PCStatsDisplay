@@ -7,6 +7,7 @@
   --bg-primary:   rgba(12, 12, 18, 0.94);
   --bg-secondary: rgba(20, 20, 30, 0.88);
   --bg-hover:     rgba(38, 38, 56, 0.90);
+  --font-dot: 'DotGothic16', ui-monospace, monospace;
 
   /* Text */
   --text-primary:   rgba(255, 255, 255, 0.94);
